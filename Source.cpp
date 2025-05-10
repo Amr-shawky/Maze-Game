@@ -3,6 +3,8 @@
 #include <iostream>
 #include <string>
 #include <ctime>
+#define STB_IMAGE_IMPLEMENTATION  // Add this line to include stb_image implementation
+#include "gl/stb_image1.h"            // Include stb_image.h for texture loading
 
 // Maze sizes for different levels
 const int MAZE_SIZES[] = { 10, 15, 20, 25 }; // Level 0, 1, 2, 3
@@ -142,9 +144,9 @@ float coinRotation = 0.0f;
 // Key states
 bool keys[256] = { false };
 
-// Texture IDs (placeholders)
-GLuint wallTexture = 0;
-GLuint floorTexture = 0;
+// Texture IDs
+GLuint wallTexture = 0;  // Texture for walls
+GLuint floorTexture = 0; // Placeholder for floor texture if needed
 
 // Window dimensions
 int windowWidth = 800;
@@ -226,20 +228,39 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-// Initialize OpenGL settings and modify mazes
+// Initialize OpenGL settings and load textures
 void init() {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glEnable(GL_LIGHT1);
     glEnable(GL_COLOR_MATERIAL);
-    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_TEXTURE_2D);  // Enable 2D textures
 
     GLfloat lightPos0[] = { 5.0f, 5.0f, 5.0f, 1.0f };
     glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
 
     GLfloat lightPos1[] = { 0.0f, 5.0f, 0.0f, 1.0f };
     glLightfv(GL_LIGHT1, GL_POSITION, lightPos1);
+
+    // Load wall texture
+    int width, height, channels;
+    unsigned char* image = stbi_load("E:\\faculty material\\Maze Game\\wallimg.jpg", &width, &height, &channels, 0);
+    if (!image) {
+        std::cerr << "Error: Could not load wall texture!" << std::endl;
+        exit(1);
+    }
+
+    glGenTextures(1, &wallTexture);
+    glBindTexture(GL_TEXTURE_2D, wallTexture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+    stbi_image_free(image);
 
     // Modify mazes to add random paths
     for (int level = 0; level < NUM_LEVELS; level++) {
@@ -612,32 +633,55 @@ void updatePlayer() {
     }
 }
 
-// Draw wall at specified position
+// Draw wall at specified position with texture
 void drawWall(float x, float z) {
     glPushMatrix();
     glTranslatef(x, 1.0f, z);
     glScalef(1.0f, 2.0f, 1.0f);
-    glColor3f(0.7f, 0.7f, 0.7f);
+    glColor3f(1.0f, 1.0f, 1.0f);  // Set to white to show texture colors properly
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, wallTexture);
 
     glBegin(GL_QUADS);
+    // Front face
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-0.5f, -0.5f, 0.5f);
     glTexCoord2f(1.0f, 0.0f); glVertex3f(0.5f, -0.5f, 0.5f);
     glTexCoord2f(1.0f, 1.0f); glVertex3f(0.5f, 0.5f, 0.5f);
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-0.5f, 0.5f, 0.5f);
+
+    // Back face
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-0.5f, -0.5f, -0.5f);
     glTexCoord2f(1.0f, 0.0f); glVertex3f(0.5f, -0.5f, -0.5f);
     glTexCoord2f(1.0f, 1.0f); glVertex3f(0.5f, 0.5f, -0.5f);
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-0.5f, 0.5f, -0.5f);
+
+    // Left face
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-0.5f, -0.5f, -0.5f);
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-0.5f, -0.5f, 0.5f);
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-0.5f, 0.5f, 0.5f);
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-0.5f, 0.5f, -0.5f);
+
+    // Right face
     glTexCoord2f(0.0f, 0.0f); glVertex3f(0.5f, -0.5f, -0.5f);
     glTexCoord2f(1.0f, 0.0f); glVertex3f(0.5f, -0.5f, 0.5f);
     glTexCoord2f(1.0f, 1.0f); glVertex3f(0.5f, 0.5f, 0.5f);
     glTexCoord2f(0.0f, 1.0f); glVertex3f(0.5f, 0.5f, -0.5f);
+
+    // Top face (optional, if visible)
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(-0.5f, 0.5f, -0.5f);
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.5f, 0.5f, -0.5f);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.5f, 0.5f, 0.5f);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(-0.5f, 0.5f, 0.5f);
+
+    // Bottom face (optional, if visible)
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(-0.5f, -0.5f, -0.5f);
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.5f, -0.5f, -0.5f);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.5f, -0.5f, 0.5f);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(-0.5f, -0.5f, 0.5f);
     glEnd();
 
+    glDisable(GL_TEXTURE_2D);
     glPopMatrix();
 }
 
@@ -1225,6 +1269,7 @@ bool checkCollision(float x, float z) {
     }
     return false; // No collision
 }
+
 // Initialize game state
 void initGame() {
     playerX = 1.45f;  // Slightly offset from wall boundary
@@ -1237,6 +1282,7 @@ void initGame() {
     }
     score = 0;
 }
+
 // Draw text at position (x, y)
 void drawText(float x, float y, const char* text) {
     glRasterPos2f(x, y);
